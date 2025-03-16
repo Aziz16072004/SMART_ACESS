@@ -19,7 +19,7 @@ class LoginPage extends StatelessWidget {
     if (_formKey.currentState?.validate() ?? false) {
       final response = await http.post(
         Uri.parse(
-          'http://127.0.0.1:8000/signin/',
+          'https://smart-acess-server.onrender.com/signin/',
         ), // Replace with your FastAPI URL
         headers: {"Content-Type": "application/json"},
         body: json.encode({'email': email, 'password': password}),
@@ -33,7 +33,6 @@ class LoginPage extends StatelessWidget {
         final String username =
             responseData["username"]; // Get the username from the response
         Navigator.pushReplacementNamed(context, '/home', arguments: username);
-    
       } else {
         // If login fails, show the error message
         final errorData = json.decode(response.body);
