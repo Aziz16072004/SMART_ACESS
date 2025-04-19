@@ -1,27 +1,49 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
-import 'package:provider/provider.dart'; // Add this import
-import 'face_detection_camera.dart'; // Your face detection screen
-import 'login.dart'; // The LoginScreen widget
-import 'package:smart_access/theme_provider.dart';
+import 'package:provider/provider.dart';
+import 'package:smart_access/api/firebase_api.dart';
+import 'package:smart_access/mainPage.dart';
+import 'package:smart_access/signup.dart';
+import 'face_detection_camera.dart';
+import 'login.dart';
+import 'access_history_screen.dart';
+import 'access_management_screen.dart';
+import './api/firebase_api.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 void main() async {
+
+
   WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
+  FirebaseMessaging.onBackgroundMessage(handleBackgroundMessage);
+  await FirebaseApi().initNotification();
   final cameras = await availableCameras();
   runApp(
     ChangeNotifierProvider(
       create: (_) => ThemeProvider(),
-      child: HomePage(cameras: cameras),
+      child: MyApp(cameras: cameras),
     ),
   );
 }
 
 // Theme Provider
+class ThemeProvider with ChangeNotifier {
+  bool _isDarkMode = false;
 
-class HomePage extends StatelessWidget {
+  bool get isDarkMode => _isDarkMode;
+
+  void toggleTheme() {
+    _isDarkMode = !_isDarkMode;
+    notifyListeners();
+  }
+}
+
+class MyApp extends StatelessWidget {
   final List<CameraDescription> cameras;
 
-  const HomePage({super.key, required this.cameras});
+  const MyApp({super.key, required this.cameras});
 
   @override
   Widget build(BuildContext context) {
@@ -29,12 +51,13 @@ class HomePage extends StatelessWidget {
 
     return MaterialApp(
       theme: themeProvider.isDarkMode ? _buildDarkTheme() : _buildLightTheme(),
-      home: const SplashScreen(), // Show splash screen first
+      home: const SplashScreen(),
+      initialRoute: '/registration',
       routes: {
+        '/registration': (context) => mainPage(),
         '/login': (context) => LoginPage(),
-        '/home':
-            (context) =>
-            MainScreen(cameras: cameras), // Home screen as the main route
+        '/signup': (context) => SignupPage(),
+        '/home': (context) => MainScreen(cameras: cameras),
       },
     );
   }
@@ -106,7 +129,7 @@ class _SplashScreenState extends State<SplashScreen> {
   void initState() {
     super.initState();
     Future.delayed(const Duration(seconds: 2), () {
-      Navigator.pushReplacementNamed(context, '/login');
+      Navigator.pushReplacementNamed(context, '/registration');
     });
   }
 
@@ -152,15 +175,23 @@ class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
   late List<Widget> _screens;
 
+  final List<Map<String, dynamic>> _users = [];
+
   @override
   void initState() {
     super.initState();
     _screens = [
-      HomeScreen(onItemTapped: _onItemTapped), // Pass the function here
+      HomeScreen(onItemTapped: _onItemTapped),
       FaceDetectionScreen(cameras: widget.cameras),
       AccessManagementScreen(),
       AccessHistoryScreen(),
     ];
+  }
+
+  void _addUser(Map<String, dynamic> newUser) {
+    setState(() {
+      _users.add(newUser);
+    });
   }
 
   void _onItemTapped(int index) {
@@ -172,7 +203,6 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
-
     return Scaffold(
       appBar: AppBar(
         title: const Row(
@@ -343,6 +373,10 @@ class _HomeScreenState extends State<HomeScreen>
 
   @override
   Widget build(BuildContext context) {
+    final Map<String, dynamic> arguments =
+    ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+
+    final String username = arguments['username'] as String;
     return Scaffold(
       body: SingleChildScrollView(
         child: Column(
@@ -363,8 +397,8 @@ class _HomeScreenState extends State<HomeScreen>
                   children: [
                     const Icon(Icons.security, size: 50, color: Colors.white),
                     const SizedBox(height: 10),
-                    const Text(
-                      'Welcome, Admin!',
+                    Text(
+                      'Welcome, $username',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 24,
@@ -554,35 +588,3 @@ class ProfileScreen extends StatelessWidget {
 }
 
 // Access Management Screen
-class AccessManagementScreen extends StatelessWidget {
-  final List<String> users = ['Admin', 'User1', 'User2'];
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Manage Abnbccess',
-          style: TextStyle(fontFamily: 'Poppins'),
-        ),
-      ),
-      body: ListView.builder(
-        itemCount: users.length,
-        itemBuilder:
-            (context, index) => ListTile(
-          title: Text(
-            users[index],
-            style: const TextStyle(fontFamily: 'Poppins'),
-          ),
-          trailing: IconButton(
-            icon: const Icon(Icons.delete),
-            onPressed: () {
-              /* Add delete logic here */
-            },
-          ),
-        ),
-      ),
-    );
-  }
-}
-

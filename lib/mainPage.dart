@@ -33,7 +33,7 @@ class mainPage extends StatelessWidget {
                 height: MediaQuery.of(context).size.height / 3,
                 decoration: BoxDecoration(
                   image: DecorationImage(
-                    image: AssetImage("../assets/welcome.png"),
+                    image: AssetImage("assets/welcome.png"),
                   ),
                 ),
               ),

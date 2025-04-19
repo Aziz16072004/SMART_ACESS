@@ -15,7 +15,7 @@ class _SignupPageState extends State<SignupPage> {
   final TextEditingController usernameController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   final TextEditingController confirmPasswordController =
-      TextEditingController();
+  TextEditingController();
 
   final _formKey = GlobalKey<FormState>();
 
@@ -49,15 +49,15 @@ class _SignupPageState extends State<SignupPage> {
           context: context,
           builder:
               (context) => AlertDialog(
-                title: Text('Error'),
-                content: Text(responseBody['detail'] ?? 'Registration failed.'),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: Text('OK'),
-                  ),
-                ],
+            title: Text('Error'),
+            content: Text(responseBody['detail'] ?? 'Registration failed.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: Text('OK'),
               ),
+            ],
+          ),
         );
       }
     } catch (e) {
@@ -65,15 +65,15 @@ class _SignupPageState extends State<SignupPage> {
         context: context,
         builder:
             (context) => AlertDialog(
-              title: Text('Error'),
-              content: Text('Something went wrong. Please try again later.'),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: Text('OK'),
-                ),
-              ],
+          title: Text('Error'),
+          content: Text('Something went wrong. Please try again later.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text('OK'),
             ),
+          ],
+        ),
       );
     }
   }
@@ -140,11 +140,11 @@ class _SignupPageState extends State<SignupPage> {
                     TextButton(
                       onPressed:
                           () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => LoginPage(),
-                            ),
-                          ),
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => LoginPage(),
+                        ),
+                      ),
                       child: Text(
                         "Login",
                         style: TextStyle(

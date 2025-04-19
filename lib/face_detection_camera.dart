@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'dart:async';
+import 'add_user_details_screen.dart'; // New screen for adding user details
+import 'dart:io';
 
 class FaceDetectionScreen extends StatefulWidget {
   final List<CameraDescription> cameras;
@@ -18,6 +20,7 @@ class _FaceDetectionScreenState extends State<FaceDetectionScreen> {
   bool _isDetecting = false;
   bool _cameraFacingFront = false;
   List<Face> _faces = [];
+  XFile? _capturedImage; // Store the captured image
 
   @override
   void initState() {
@@ -74,6 +77,62 @@ class _FaceDetectionScreenState extends State<FaceDetectionScreen> {
     _initializeCamera();
   }
 
+  Future<void> _takePicture() async {
+    if (!_cameraController.value.isInitialized) return;
+
+    try {
+      final XFile picture = await _cameraController.takePicture();
+      setState(() {
+        _capturedImage = picture; // Save the captured image
+      });
+
+      // Navigate to the confirmation dialog
+      _showConfirmationDialog(picture);
+    } catch (e) {
+      print("Error taking picture: $e");
+    }
+  }
+
+  void _showConfirmationDialog(XFile picture) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Confirm Picture"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Image.file(File(picture.path), height: 200),
+            const SizedBox(height: 10),
+            const Text("Is this the correct picture?"),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel"),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context); // Close the dialog
+              final newUser = await Navigator.push<Map<String, dynamic>>(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => AddUserDetailsScreen(imagePath: picture.path),
+                ),
+              );
+
+              if (newUser != null) {
+                // Pass the new user data back to the parent widget (MainScreen)
+                Navigator.pop(context, newUser);
+              }
+            },
+            child: const Text("Confirm"),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _cameraController.dispose();
@@ -93,10 +152,19 @@ class _FaceDetectionScreenState extends State<FaceDetectionScreen> {
         _buildFaceBoundingBoxes(),
         Positioned(
           bottom: 20,
-          left: MediaQuery.of(context).size.width / 2 - 30,
-          child: FloatingActionButton(
-            onPressed: _flipCamera,
-            child: const Icon(Icons.flip_camera_android),
+          left: MediaQuery.of(context).size.width / 2 - 60,
+          child: Row(
+            children: [
+              FloatingActionButton(
+                onPressed: _flipCamera,
+                child: const Icon(Icons.flip_camera_android),
+              ),
+              const SizedBox(width: 20),
+              FloatingActionButton(
+                onPressed: _takePicture,
+                child: const Icon(Icons.camera),
+              ),
+            ],
           ),
         ),
       ],

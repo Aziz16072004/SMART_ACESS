@@ -1,13 +1,24 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
-import 'package:provider/provider.dart'; // Add this import
+import 'package:provider/provider.dart';
+import 'package:smart_access/api/firebase_api.dart';
 import 'package:smart_access/mainPage.dart';
 import 'package:smart_access/signup.dart';
-import 'face_detection_camera.dart'; // Your face detection screen
-import 'login.dart'; // The LoginScreen widget
+import 'face_detection_camera.dart';
+import 'login.dart';
+import 'access_history_screen.dart';
+import 'access_management_screen.dart';
+import './api/firebase_api.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 void main() async {
+
+
   WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
+  FirebaseMessaging.onBackgroundMessage(handleBackgroundMessage); // Add this line
+  await FirebaseApi().initNotification();
   final cameras = await availableCameras();
   runApp(
     ChangeNotifierProvider(
@@ -40,15 +51,13 @@ class MyApp extends StatelessWidget {
 
     return MaterialApp(
       theme: themeProvider.isDarkMode ? _buildDarkTheme() : _buildLightTheme(),
-      home: const SplashScreen(), // Show splash screen first
+      home: const SplashScreen(),
       initialRoute: '/registration',
       routes: {
         '/registration': (context) => mainPage(),
         '/login': (context) => LoginPage(),
         '/signup': (context) => SignupPage(),
-        '/home':
-            (context) =>
-                MainScreen(cameras: cameras), // Home screen as the main route
+        '/home': (context) => MainScreen(cameras: cameras),
       },
     );
   }
@@ -166,15 +175,23 @@ class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
   late List<Widget> _screens;
 
+  final List<Map<String, dynamic>> _users = [];
+
   @override
   void initState() {
     super.initState();
     _screens = [
-      HomeScreen(onItemTapped: _onItemTapped), // Pass the function here
+      HomeScreen(onItemTapped: _onItemTapped),
       FaceDetectionScreen(cameras: widget.cameras),
       AccessManagementScreen(),
       AccessHistoryScreen(),
     ];
+  }
+
+  void _addUser(Map<String, dynamic> newUser) {
+    setState(() {
+      _users.add(newUser);
+    });
   }
 
   void _onItemTapped(int index) {
@@ -186,7 +203,6 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
-
     return Scaffold(
       appBar: AppBar(
         title: const Row(
@@ -213,8 +229,8 @@ class _MainScreenState extends State<MainScreen> {
           padding: EdgeInsets.zero,
           children: [
             UserAccountsDrawerHeader(
-              accountName: Text(
-                'admin', // Correct string interpolation
+              accountName: const Text(
+                'Admin',
                 style: TextStyle(fontFamily: 'Poppins'),
               ),
               accountEmail: const Text(
@@ -357,9 +373,10 @@ class _HomeScreenState extends State<HomeScreen>
 
   @override
   Widget build(BuildContext context) {
-    final String username =
-        ModalRoute.of(context)!.settings.arguments as String;
+    final Map<String, dynamic> arguments =
+        ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
 
+    final String username = arguments['username'] as String;
     return Scaffold(
       body: SingleChildScrollView(
         child: Column(
@@ -571,72 +588,3 @@ class ProfileScreen extends StatelessWidget {
 }
 
 // Access Management Screen
-class AccessManagementScreen extends StatelessWidget {
-  final List<String> users = ['Admin', 'User1', 'User2'];
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Manage Access',
-          style: TextStyle(fontFamily: 'Poppins'),
-        ),
-      ),
-      body: ListView.builder(
-        itemCount: users.length,
-        itemBuilder:
-            (context, index) => ListTile(
-              title: Text(
-                users[index],
-                style: const TextStyle(fontFamily: 'Poppins'),
-              ),
-              trailing: IconButton(
-                icon: const Icon(Icons.delete),
-                onPressed: () {
-                  /* Add delete logic here */
-                },
-              ),
-            ),
-      ),
-    );
-  }
-}
-
-// Access History Screen
-class AccessHistoryScreen extends StatelessWidget {
-  final List<Map<String, dynamic>> history = [
-    {'user': 'Admin', 'time': '10:00', 'status': true},
-    {'user': 'Unknown', 'time': '10:05', 'status': false},
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Access History',
-          style: TextStyle(fontFamily: 'Poppins'),
-        ),
-      ),
-      body: ListView.builder(
-        itemCount: history.length,
-        itemBuilder:
-            (context, index) => ListTile(
-              leading: Icon(
-                history[index]['status'] ? Icons.check_circle : Icons.block,
-                color: history[index]['status'] ? Colors.green : Colors.red,
-              ),
-              title: Text(
-                history[index]['user'],
-                style: const TextStyle(fontFamily: 'Poppins'),
-              ),
-              subtitle: Text(
-                history[index]['time'],
-                style: const TextStyle(fontFamily: 'Poppins'),
-              ),
-            ),
-      ),
-    );
-  }
-}

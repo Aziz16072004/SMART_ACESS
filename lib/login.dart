@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // For SystemUiOverlayStyle
 import 'package:http/http.dart' as http;
 import 'dart:convert'; // For encoding/decoding JSON
-
+import 'package:shared_preferences/shared_preferences.dart';
 import 'signup.dart';
 import 'package:camera/camera.dart';
 
@@ -17,26 +17,49 @@ class LoginPage extends StatelessWidget {
 
     // Make sure the form is valid before making the API request
     if (_formKey.currentState?.validate() ?? false) {
+
+      print("babababa");
       final response = await http.post(
-        Uri.parse(
-          'https://smart-acess-server.onrender.com/signin/',
-        ), // Replace with your FastAPI URL
+        Uri.parse('http://192.168.1.15:8000/signin/'),
+
         headers: {"Content-Type": "application/json"},
         body: json.encode({'email': email, 'password': password}),
       );
-      print(json.decode(response.body));
+
       if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+
+        // Check if the necessary fields exist in the response
+        final String username = responseData["username"] ?? "Guest";
+        final String userEmail = responseData["email"] ?? "";
+        final String userId = responseData["user_id"] ?? "";
+
+        // Store individual fields in SharedPreferences
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('username', username);
+        await prefs.setString('email', userEmail);
+        await prefs.setString('userId', userId);
+
+        // Initialize the cameras after successful login
         final cameras = await availableCameras();
 
-        // If login is successful
-        final responseData = json.decode(response.body);
-        final String username =
-            responseData["username"]; // Get the username from the response
-        Navigator.pushReplacementNamed(context, '/home', arguments: username);
+        // If there are cameras available, you can proceed to pass camera data
+        final firstCamera = cameras.isNotEmpty ? cameras.first : null;
+
+        // Navigate to the home page and pass user details
+        Navigator.pushReplacementNamed(
+          context,
+          '/home',
+          arguments: {
+            'username': username,
+            'email': userEmail,
+            'userId': userId,
+            'camera': firstCamera, // Passing the camera to the next screen
+          },
+        );
       } else {
-        // If login fails, show the error message
         final errorData = json.decode(response.body);
-        _showError(context, errorData['detail']);
+        _showError(context, errorData['detail'] ?? 'Unknown error');
       }
     }
   }
@@ -45,19 +68,18 @@ class LoginPage extends StatelessWidget {
   void _showError(BuildContext context, String message) {
     showDialog(
       context: context,
-      builder:
-          (ctx) => AlertDialog(
-            title: Text('Error'),
-            content: Text(message),
-            actions: <Widget>[
-              TextButton(
-                onPressed: () {
-                  Navigator.of(ctx).pop();
-                },
-                child: Text('Close'),
-              ),
-            ],
+      builder: (ctx) => AlertDialog(
+        title: Text('Error'),
+        content: Text(message),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+            },
+            child: Text('Close'),
           ),
+        ],
+      ),
     );
   }
 
@@ -68,8 +90,7 @@ class LoginPage extends StatelessWidget {
       backgroundColor: Colors.white,
       appBar: AppBar(
         elevation: 0,
-        systemOverlayStyle:
-            SystemUiOverlayStyle.dark, // Set the status bar style here
+        systemOverlayStyle: SystemUiOverlayStyle.dark, // Set the status bar style here
         backgroundColor: Colors.white,
         leading: IconButton(
           onPressed: () {
@@ -119,8 +140,7 @@ class LoginPage extends StatelessWidget {
                             validator: (value) {
                               if (value == null || value.isEmpty) {
                                 return 'Email cannot be empty';
-                              } else if (!value.contains('@') ||
-                                  !value.contains('.')) {
+                              } else if (!value.contains('@') || !value.contains('.')) {
                                 return 'Please enter a valid email';
                               }
                               return null;
@@ -203,7 +223,7 @@ class LoginPage extends StatelessWidget {
                       height: 200,
                       decoration: BoxDecoration(
                         image: DecorationImage(
-                          image: AssetImage("../assets/background.png"),
+                          image: AssetImage("assets/background.png"),
                           fit: BoxFit.fitHeight,
                         ),
                       ),
