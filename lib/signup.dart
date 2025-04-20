@@ -34,7 +34,7 @@ class _SignupPageState extends State<SignupPage> {
 
     try {
       final response = await http.post(
-        Uri.parse('https://smart-acess-server.onrender.com/register/'),
+        Uri.parse('http://192.168.1.15:8000/register/'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode(userData),
       );
