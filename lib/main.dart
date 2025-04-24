@@ -11,10 +11,11 @@ import 'access_history_screen.dart';
 import 'access_management_screen.dart';
 import './api/firebase_api.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 void main() async {
 
-
+  await dotenv.load();
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
   FirebaseMessaging.onBackgroundMessage(handleBackgroundMessage); // Add this line

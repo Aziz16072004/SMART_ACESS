@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'login.dart';
 import 'package:camera/camera.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class SignupPage extends StatefulWidget {
   @override
@@ -34,7 +35,7 @@ class _SignupPageState extends State<SignupPage> {
 
     try {
       final response = await http.post(
-        Uri.parse('http://192.168.1.15:8000/register/'),
+        Uri.parse('${dotenv.env['API_BASE_URL']}/register/'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode(userData),
       );

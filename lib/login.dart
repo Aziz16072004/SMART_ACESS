@@ -5,6 +5,7 @@ import 'dart:convert'; // For encoding/decoding JSON
 import 'package:shared_preferences/shared_preferences.dart';
 import 'signup.dart';
 import 'package:camera/camera.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class LoginPage extends StatelessWidget {
   final TextEditingController emailController = TextEditingController();
@@ -17,10 +18,8 @@ class LoginPage extends StatelessWidget {
 
     // Make sure the form is valid before making the API request
     if (_formKey.currentState?.validate() ?? false) {
-
-      print("babababa");
       final response = await http.post(
-        Uri.parse('http://192.168.1.15:8000/signin/'),
+        Uri.parse('${dotenv.env['API_BASE_URL']}/signin/'),
 
         headers: {"Content-Type": "application/json"},
         body: json.encode({'email': email, 'password': password}),

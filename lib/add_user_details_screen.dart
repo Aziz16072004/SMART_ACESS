@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:mime/mime.dart';
 import 'package:http_parser/http_parser.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class AddUserDetailsScreen extends StatefulWidget {
   final String imagePath;
@@ -26,7 +27,7 @@ class _AddUserDetailsScreenState extends State<AddUserDetailsScreen> {
       print('No userId found in SharedPreferences');
       return;
     }
-    final uri = Uri.parse('http://172.20.10.4:8000/upload'); // Your FastAPI server URL
+    final uri = Uri.parse('${dotenv.env['API_BASE_URL']}/upload'); // Your FastAPI server URL
     final mimeType = lookupMimeType(imageFile.path);
 
     final request = http.MultipartRequest('POST', uri)

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class AccessManagementScreen extends StatefulWidget {
   @override
@@ -9,7 +10,7 @@ class AccessManagementScreen extends StatefulWidget {
 }
 
 class _AccessManagementScreenState extends State<AccessManagementScreen> {
-  final String _baseUrl = 'http://192.168.1.15:8000'; // Replace with your real API
+  final String _baseUrl = '${dotenv.env['API_BASE_URL']}'; // Replace with your real API
   List<dynamic> _pictures = [];
   String? _userId;
 
@@ -43,7 +44,7 @@ class _AccessManagementScreenState extends State<AccessManagementScreen> {
 
   Future<void> _deletePicture(String pictureId) async {
     final response = await http.delete(Uri.parse('$_baseUrl/pictures/$pictureId'));
-
+    print(response);
     if (response.statusCode == 200) {
       setState(() {
         _pictures.removeWhere((pic) => pic['_id'] == pictureId);
@@ -71,7 +72,7 @@ class _AccessManagementScreenState extends State<AccessManagementScreen> {
               ClipRRect(
                 borderRadius: BorderRadius.circular(15),
                 child: Image.network(
-                  '$_baseUrl${picture['picture']}',
+                  '$_baseUrl/${picture['picture']}',
                   height: 180,
                   width: double.infinity,
                   fit: BoxFit.cover,
@@ -131,7 +132,7 @@ class _AccessManagementScreenState extends State<AccessManagementScreen> {
         itemCount: _pictures.length,
         itemBuilder: (context, index) {
           final pic = _pictures[index];
-          final imageUrl = '$_baseUrl${pic['picture']}';
+          final imageUrl = '$_baseUrl/${pic['picture']}';
 
           return GestureDetector(
             onTap: () => _showPictureDetails(pic),

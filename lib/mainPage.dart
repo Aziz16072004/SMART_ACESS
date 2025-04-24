@@ -66,7 +66,7 @@ class mainPage extends StatelessWidget {
                     },
                     color: Color(0xff0095FF),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(50),
+                      borderRadius: BorderRadius. circular(50),
                     ),
                     child: Text(
                       "Sign up",
