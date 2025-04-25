@@ -8,7 +8,9 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class AddUserDetailsScreen extends StatefulWidget {
   final String imagePath;
+
   const AddUserDetailsScreen({super.key, required this.imagePath});
+
   @override
   _AddUserDetailsScreenState createState() => _AddUserDetailsScreenState();
 }
@@ -17,32 +19,35 @@ class _AddUserDetailsScreenState extends State<AddUserDetailsScreen> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _accessLevelController = TextEditingController();
 
-  // Function to upload the image to your server
-  Future<void> _uploadImage(File imageFile) async {
-    // Fetch the userId from SharedPreferences
+  Future<void> _uploadImage() async {
     final prefs = await SharedPreferences.getInstance();
-    final userId = prefs.getString('userId') ?? ''; // Default to an empty string if userId is not found
+    final userId = prefs.getString('userId') ?? '';
+    print("image = ${widget.imagePath}");
 
     if (userId.isEmpty) {
       print('No userId found in SharedPreferences');
       return;
     }
-    final uri = Uri.parse('${dotenv.env['API_BASE_URL']}/upload'); // Your FastAPI server URL
-    final mimeType = lookupMimeType(imageFile.path);
 
+    final uri = Uri.parse('${dotenv.env['API_BASE_URL']}/upload');
     final request = http.MultipartRequest('POST', uri)
-      ..fields['userId'] = userId  // Using the retrieved userId
+      ..fields['userId'] = userId
       ..fields['name'] = _nameController.text
-      ..fields['accessLevel'] = _accessLevelController.text
-      ..files.add(await http.MultipartFile.fromPath(
-        'image', // This must match the parameter name in FastAPI (`UploadFile = File(...)`)
-        imageFile.path,
-        contentType: mimeType != null ? MediaType.parse(mimeType) : null,  // Handle MIME type
+      ..fields['accessLevel'] = _accessLevelController.text;
+
+    if (widget.imagePath.startsWith('http://') || widget.imagePath.startsWith('https://')) {
+      request.fields['imageUrl'] = widget.imagePath;
+    } else {
+      final mimeType = lookupMimeType(widget.imagePath);
+      request.files.add(await http.MultipartFile.fromPath(
+        'image',
+        widget.imagePath,
+        contentType: mimeType != null ? MediaType.parse(mimeType) : null,
       ));
+    }
 
     try {
       final response = await request.send();
-
       if (response.statusCode == 200) {
         print('Image uploaded successfully');
       } else {
@@ -55,6 +60,10 @@ class _AddUserDetailsScreenState extends State<AddUserDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final imageWidget = widget.imagePath.startsWith('http://') || widget.imagePath.startsWith('https://')
+        ? Image.network(widget.imagePath, height: 200)
+        : Image.file(File(widget.imagePath), height: 200);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text("Add User Details"),
@@ -63,7 +72,7 @@ class _AddUserDetailsScreenState extends State<AddUserDetailsScreen> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            Image.file(File(widget.imagePath), height: 200),
+            imageWidget,
             const SizedBox(height: 20),
             TextField(
               controller: _nameController,
@@ -83,10 +92,8 @@ class _AddUserDetailsScreenState extends State<AddUserDetailsScreen> {
                   'imagePath': widget.imagePath,
                 };
 
-                // Upload the image before saving the user
-                await _uploadImage(File(widget.imagePath));
+                await _uploadImage();
 
-                // Return the new user data to the previous screen
                 Navigator.pop(context, newUser);
               },
               child: const Text("Save User"),

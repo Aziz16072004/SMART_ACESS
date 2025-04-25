@@ -12,13 +12,13 @@ import 'access_management_screen.dart';
 import './api/firebase_api.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:socket_io_client/socket_io_client.dart' as IO;
 
 void main() async {
-
   await dotenv.load();
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
-  FirebaseMessaging.onBackgroundMessage(handleBackgroundMessage); // Add this line
+  FirebaseMessaging.onBackgroundMessage(handleBackgroundMessage);
   await FirebaseApi().initNotification();
   final cameras = await availableCameras();
   runApp(
@@ -27,6 +27,45 @@ void main() async {
       child: MyApp(cameras: cameras),
     ),
   );
+}
+
+// Socket Service
+class SocketService {
+  IO.Socket? socket;
+  int notificationCount = 0;
+  Function(int)? onCountChanged;
+
+  void initialize(String userId, Function(int) onCountUpdate) {
+    onCountChanged = onCountUpdate;
+
+    // Replace with your server URL
+    socket = IO.io('${dotenv.env['API_BASE_URL']}', <String, dynamic>{
+      'transports': ['websocket'],
+      'autoConnect': true,
+    });
+
+    socket!.onConnect((_) {
+      print('Socket connected');
+      socket!.emit('join_room', {'user_id': userId});
+    });
+
+    socket!.on('notification_count', (data) {
+
+        notificationCount = data['count'];
+        onCountChanged?.call(notificationCount);
+        print(data);
+
+    });
+
+    socket!.onDisconnect((_) => print('Socket disconnected'));
+    socket!.onError((error) => print('Socket error: $error'));
+  }
+
+  void dispose() {
+    socket?.disconnect();
+    socket?.dispose();
+    socket = null;
+  }
 }
 
 // Theme Provider
@@ -175,8 +214,8 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
   late List<Widget> _screens;
-
-  final List<Map<String, dynamic>> _users = [];
+  int _notificationCount = 0;
+  late SocketService _socketService;
 
   @override
   void initState() {
@@ -187,15 +226,28 @@ class _MainScreenState extends State<MainScreen> {
       AccessManagementScreen(),
       AccessHistoryScreen(),
     ];
-  }
 
-  void _addUser(Map<String, dynamic> newUser) {
-    setState(() {
-      _users.add(newUser);
+
+    _socketService = SocketService();
+    _socketService.initialize('admin_user_id', (count) {
+      setState(() {
+        _notificationCount = count;
+      });
     });
   }
 
+  @override
+  void dispose() {
+    _socketService.dispose();
+    super.dispose();
+  }
+
   void _onItemTapped(int index) {
+    if (index == 3) { // If history tab is clicked, reset notification count
+      setState(() {
+        _notificationCount = 0;
+      });
+    }
     setState(() {
       _selectedIndex = index;
     });
@@ -279,13 +331,46 @@ class _MainScreenState extends State<MainScreen> {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.history),
+              leading: Stack(
+                children: [
+                  const Icon(Icons.history),
+                  if (_notificationCount > 0)
+                    Positioned(
+                      right: 0,
+                      child: Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: BoxDecoration(
+                          color: Colors.red,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        constraints: const BoxConstraints(
+                          minWidth: 16,
+                          minHeight: 16,
+                        ),
+                        child: Text(
+                          '$_notificationCount',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
               title: const Text(
                 'History',
                 style: TextStyle(fontFamily: 'Poppins'),
               ),
               onTap: () {
-                setState(() => _selectedIndex = 3);
+                setState(() {
+                  _selectedIndex = 3;
+                  _notificationCount = 0;
+                });
+
+                  _socketService.socket!.emit('reset_notification_counts', {});
+
                 Navigator.pop(context);
               },
             ),
@@ -326,11 +411,41 @@ class _MainScreenState extends State<MainScreen> {
         onTap: _onItemTapped,
         selectedItemColor: Theme.of(context).colorScheme.secondary,
         unselectedItemColor: Colors.grey,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.camera_alt), label: 'Scan'),
-          BottomNavigationBarItem(icon: Icon(Icons.people), label: 'Manage'),
-          BottomNavigationBarItem(icon: Icon(Icons.history), label: 'History'),
+        items: [
+          const BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+          const BottomNavigationBarItem(icon: Icon(Icons.camera_alt), label: 'Scan'),
+          const BottomNavigationBarItem(icon: Icon(Icons.people), label: 'Manage'),
+          BottomNavigationBarItem(
+            icon: Stack(
+              children: [
+                const Icon(Icons.history),
+                if (_notificationCount > 0)
+                  Positioned(
+                    right: 0,
+                    child: Container(
+                      padding: const EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        color: Colors.red,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 16,
+                        minHeight: 16,
+                      ),
+                      child: Text(
+                        '$_notificationCount',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            label: 'History',
+          ),
         ],
       ),
     );
@@ -375,7 +490,7 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   Widget build(BuildContext context) {
     final Map<String, dynamic> arguments =
-        ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+    ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
 
     final String username = arguments['username'] as String;
     return Scaffold(
@@ -461,10 +576,10 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Widget _buildQuickAccessCard(
-    IconData icon,
-    String label,
-    VoidCallback onTap,
-  ) {
+      IconData icon,
+      String label,
+      VoidCallback onTap,
+      ) {
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -479,7 +594,7 @@ class _HomeScreenState extends State<HomeScreen>
                 icon,
                 size: 60,
                 color: Colors.blue,
-              ), // Always use blue for icons
+              ),
               const SizedBox(height: 10),
               Text(
                 label,
@@ -587,5 +702,3 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 }
-
-// Access Management Screen

@@ -76,6 +76,15 @@ class _AccessManagementScreenState extends State<AccessManagementScreen> {
                   height: 180,
                   width: double.infinity,
                   fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    // If the image fails to load, show a default image
+                    return Image.asset(
+                      'assets/unknown.png',  // Provide the fallback image here
+                      height: 180,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                    );
+                  },
                 ),
               ),
               SizedBox(height: 20),
@@ -132,6 +141,7 @@ class _AccessManagementScreenState extends State<AccessManagementScreen> {
         itemCount: _pictures.length,
         itemBuilder: (context, index) {
           final pic = _pictures[index];
+
           final imageUrl = '$_baseUrl/${pic['picture']}';
 
           return GestureDetector(
@@ -139,7 +149,25 @@ class _AccessManagementScreenState extends State<AccessManagementScreen> {
             child: Card(
               margin: EdgeInsets.all(8.0),
               child: ListTile(
-                leading: Image.network(imageUrl, width: 50, height: 50, fit: BoxFit.cover),
+                leading: ClipRRect(
+                  borderRadius: BorderRadius.circular(15),
+                  child: Image.network(
+                    imageUrl, // Replace with your actual URL
+                    width: 50,
+                    height: 50,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      // If the image fails to load, show a default image
+                      return Image.asset(
+                        'assets/unknown.png',  // Provide the fallback image here
+                        width: 50,
+                        height: 50,
+                        fit: BoxFit.cover,
+                      );
+                    },
+                  ),
+                ),
+
                 title: Text(pic['name'] ?? 'Unknown'),
                 subtitle: Text('Access: ${pic['accessLevel'] ?? 'N/A'}'),
                 trailing: IconButton(
